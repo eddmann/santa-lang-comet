@@ -1,11 +1,13 @@
 #![allow(clippy::collapsible_if)]
 
 mod external_functions;
+mod output;
 
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use getopts::Options;
+use output::OutputMode;
 use rustyline::DefaultEditor;
 use santa_lang::{AoCRunner, Environment, Evaluator, Lexer, Location, Object, Parser, RunErr, RunEvaluation, Time};
 use std::fs;
@@ -23,6 +25,7 @@ fn main() -> Result<()> {
 
     let mut opts = Options::new();
     opts.optopt("e", "eval", "evaluate inline script", "SCRIPT");
+    opts.optopt("o", "output", "output format: text, json, jsonl", "FORMAT");
     opts.optflag("t", "test", "run the solution's test suite");
     opts.optflag("s", "slow", "include slow tests (marked with @slow)");
     opts.optflag("r", "repl", "begin an interactive REPL session");
@@ -35,6 +38,17 @@ fn main() -> Result<()> {
     opts.optflag("p", "profile", "profile the execution");
 
     let matches = opts.parse(&args[1..])?;
+
+    // Parse output mode
+    let output_mode = match matches.opt_str("o").as_deref() {
+        None | Some("text") => OutputMode::Text,
+        Some("json") => OutputMode::Json,
+        Some("jsonl") => OutputMode::Jsonl,
+        Some(other) => {
+            eprintln!("Error: Invalid output format '{}'. Use: text, json, jsonl", other);
+            std::process::exit(1);
+        }
+    };
 
     if matches.opt_present("h") {
         print_help();
@@ -88,7 +102,7 @@ fn main() -> Result<()> {
 
     if matches.opt_present("t") {
         let include_slow = matches.opt_present("s");
-        return aoc_test(&source, source_path.as_deref(), include_slow);
+        return aoc_test(&source, source_path.as_deref(), include_slow, output_mode);
     }
 
     #[cfg(feature = "profile")]
@@ -104,7 +118,7 @@ fn main() -> Result<()> {
         None
     };
 
-    aoc_run(&source, source_path.as_deref())?;
+    aoc_run(&source, source_path.as_deref(), output_mode)?;
 
     #[cfg(feature = "profile")]
     if let Some(guard) = profiler {
@@ -148,12 +162,15 @@ USAGE:
     santa-cli -e <CODE>             Evaluate inline script
     santa-cli -t <SCRIPT>           Run test suite
     santa-cli -t -s <SCRIPT>        Run tests including @slow
+    santa-cli -o json <SCRIPT>      Output as JSON
+    santa-cli -o jsonl <SCRIPT>     Output as JSON Lines (streaming)
     santa-cli -r                    Start REPL
     santa-cli -h                    Show this help
     cat file | santa-cli            Read from stdin
 
 OPTIONS:
     -e, --eval <CODE>    Evaluate inline script
+    -o, --output FORMAT  Output format: text (default), json, jsonl
     -t, --test           Run the solution's test suite
     -s, --slow           Include @slow tests (use with -t)
     -r, --repl           Start interactive REPL
@@ -226,91 +243,433 @@ fn repl() -> Result<()> {
     Ok(())
 }
 
-fn aoc_run(source: &str, source_path: Option<&str>) -> Result<()> {
+fn aoc_run(source: &str, source_path: Option<&str>, output_mode: OutputMode) -> Result<()> {
+    // Enable console capture for JSON/JSONL modes
+    if output_mode != OutputMode::Text {
+        crate::external_functions::enable_console_capture();
+    }
+
     let mut runner = AoCRunner::new_with_external_functions(CliTime {}, &crate::external_functions::definitions());
-    match runner.run(source) {
-        Ok(RunEvaluation::Script(result)) => {
-            println!("{}", result.value);
-            Ok(())
+
+    match output_mode {
+        OutputMode::Text => match runner.run(source) {
+            Ok(RunEvaluation::Script(result)) => {
+                println!("{}", result.value);
+                Ok(())
+            }
+            Ok(RunEvaluation::Solution { part_one, part_two }) => {
+                if let Some(part_one) = part_one {
+                    println!(
+                        "Part 1: \x1b[32m{}\x1b[0m \x1b[90m{}ms\x1b[0m",
+                        part_one.value, part_one.duration
+                    )
+                }
+
+                if let Some(part_two) = part_two {
+                    println!(
+                        "Part 2: \x1b[32m{}\x1b[0m \x1b[90m{}ms\x1b[0m",
+                        part_two.value, part_two.duration
+                    )
+                }
+
+                Ok(())
+            }
+            Err(error) => {
+                print_error(source_path.unwrap_or("<stdin>"), source, error);
+                std::process::exit(2);
+            }
+        },
+        OutputMode::Json => match runner.run(source) {
+            Ok(result) => {
+                let console = crate::external_functions::disable_console_capture();
+                let json = output::format_run_json(&result, console);
+                println!("{}", json);
+                Ok(())
+            }
+            Err(error) => {
+                let _ = crate::external_functions::disable_console_capture();
+                let json = serde_json::to_string(&output::format_error_json(source, &error)).unwrap();
+                println!("{}", json);
+                std::process::exit(2);
+            }
+        },
+        OutputMode::Jsonl => {
+            aoc_run_jsonl(source, &mut runner)
         }
-        Ok(RunEvaluation::Solution { part_one, part_two }) => {
-            if let Some(part_one) = part_one {
-                println!(
-                    "Part 1: \x1b[32m{}\x1b[0m \x1b[90m{}ms\x1b[0m",
-                    part_one.value, part_one.duration
-                )
-            }
+    }
+}
 
-            if let Some(part_two) = part_two {
-                println!(
-                    "Part 2: \x1b[32m{}\x1b[0m \x1b[90m{}ms\x1b[0m",
-                    part_two.value, part_two.duration
-                )
-            }
+fn aoc_run_jsonl(source: &str, runner: &mut AoCRunner<CliTime>) -> Result<()> {
+    use output::*;
+    use std::io;
 
+    let mut writer = JsonlWriter::new(io::stdout());
+    let (has_part_one, has_part_two) = is_solution_source(source);
+    let is_solution = has_part_one || has_part_two;
+
+    if is_solution {
+        // Emit initial solution state
+        let initial = JsonlSolutionInitial {
+            output_type: "solution",
+            status: "pending",
+            part_one: if has_part_one {
+                Some(JsonlPartInitial {
+                    status: "pending",
+                    value: None,
+                    duration_ms: None,
+                })
+            } else {
+                None
+            },
+            part_two: if has_part_two {
+                Some(JsonlPartInitial {
+                    status: "pending",
+                    value: None,
+                    duration_ms: None,
+                })
+            } else {
+                None
+            },
+            console: vec![],
+        };
+        writer.write_initial(&initial)?;
+
+        // Emit running status
+        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/status", "running")])?;
+    } else {
+        // Emit initial script state
+        let initial = JsonlScriptInitial {
+            output_type: "script",
+            status: "pending",
+            value: None,
+            duration_ms: None,
+            console: vec![],
+        };
+        writer.write_initial(&initial)?;
+
+        // Emit running status
+        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/status", "running")])?;
+    }
+
+    // Run and emit results
+    // Note: For full streaming we'd need hooks into the runner. For now we emit after completion.
+    match runner.run(source) {
+        Ok(result) => {
+            let console = crate::external_functions::disable_console_capture();
+
+            match result {
+                RunEvaluation::Script(ref r) => {
+                    // Emit console entries
+                    for entry in &console {
+                        writer.write_patches(&[JsonlWriter::<io::Stdout>::add_patch("/console/-", entry)])?;
+                    }
+                    // Emit completion
+                    writer.write_patches(&[
+                        JsonlWriter::<io::Stdout>::replace_patch("/status", "complete"),
+                        JsonlWriter::<io::Stdout>::replace_patch("/value", &r.value),
+                        JsonlWriter::<io::Stdout>::replace_patch("/duration_ms", r.duration as u64),
+                    ])?;
+                }
+                RunEvaluation::Solution { ref part_one, ref part_two } => {
+                    // Emit console entries first
+                    for entry in &console {
+                        writer.write_patches(&[JsonlWriter::<io::Stdout>::add_patch("/console/-", entry)])?;
+                    }
+
+                    if let Some(p1) = part_one {
+                        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/part_one/status", "running")])?;
+                        writer.write_patches(&[
+                            JsonlWriter::<io::Stdout>::replace_patch("/part_one/status", "complete"),
+                            JsonlWriter::<io::Stdout>::replace_patch("/part_one/value", &p1.value),
+                            JsonlWriter::<io::Stdout>::replace_patch("/part_one/duration_ms", p1.duration as u64),
+                        ])?;
+                    }
+
+                    if let Some(p2) = part_two {
+                        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/part_two/status", "running")])?;
+                        writer.write_patches(&[
+                            JsonlWriter::<io::Stdout>::replace_patch("/part_two/status", "complete"),
+                            JsonlWriter::<io::Stdout>::replace_patch("/part_two/value", &p2.value),
+                            JsonlWriter::<io::Stdout>::replace_patch("/part_two/duration_ms", p2.duration as u64),
+                        ])?;
+                    }
+
+                    writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/status", "complete")])?;
+                }
+            }
             Ok(())
         }
         Err(error) => {
-            print_error(source_path.unwrap_or("<stdin>"), source, error);
+            let _ = crate::external_functions::disable_console_capture();
+            let error_output = format_error_json(source, &error);
+            writer.write_patches(&[
+                JsonlWriter::<io::Stdout>::replace_patch("/status", "error"),
+                JsonlWriter::<io::Stdout>::add_patch("/error", &error_output),
+            ])?;
             std::process::exit(2);
         }
     }
 }
 
-fn aoc_test(source: &str, source_path: Option<&str>, include_slow: bool) -> Result<()> {
+fn aoc_test(source: &str, source_path: Option<&str>, include_slow: bool, output_mode: OutputMode) -> Result<()> {
+    // Enable console capture for JSON/JSONL modes
+    if output_mode != OutputMode::Text {
+        crate::external_functions::enable_console_capture();
+    }
+
     let mut runner = AoCRunner::new_with_external_functions(CliTime {}, &crate::external_functions::definitions());
+
+    match output_mode {
+        OutputMode::Text => match runner.test(source, include_slow) {
+            Ok(test_cases) => {
+                let mut exit_code = 0;
+
+                for (number, test_case) in test_cases.iter().enumerate() {
+                    if number > 0 {
+                        println!()
+                    }
+
+                    if test_case.skipped {
+                        println!("\x1b[4mTestcase #{}\x1b[0m \x1b[33m(skipped)\x1b[0m", number + 1);
+                        continue;
+                    }
+
+                    if test_case.slow {
+                        println!("\x1b[4mTestcase #{}\x1b[0m \x1b[33m(slow)\x1b[0m", number + 1);
+                    } else {
+                        println!("\x1b[4mTestcase #{}\x1b[0m", number + 1);
+                    }
+
+                    if test_case.part_one.is_none() && test_case.part_two.is_none() {
+                        println!("No expectations");
+                        continue;
+                    }
+
+                    if let Some(part_one) = &test_case.part_one {
+                        if part_one.passed {
+                            println!("Part 1: {} \x1b[32m✔\x1b[0m", part_one.actual);
+                        } else {
+                            println!(
+                                "Part 1: {} \x1b[31m✘ (Expected: {})\x1b[0m",
+                                part_one.actual, part_one.expected
+                            );
+                            exit_code = 3;
+                        }
+                    }
+
+                    if let Some(part_two) = &test_case.part_two {
+                        if part_two.passed {
+                            println!("Part 2: {} \x1b[32m✔\x1b[0m", part_two.actual);
+                        } else {
+                            println!(
+                                "Part 2: {} \x1b[31m✘ (Expected: {})\x1b[0m",
+                                part_two.actual, part_two.expected
+                            );
+                            exit_code = 3;
+                        }
+                    }
+                }
+
+                if exit_code != 0 {
+                    std::process::exit(exit_code);
+                }
+
+                Ok(())
+            }
+            Err(error) => {
+                print_error(source_path.unwrap_or("<stdin>"), source, error);
+                std::process::exit(2);
+            }
+        },
+        OutputMode::Json => match runner.test(source, include_slow) {
+            Ok(test_cases) => {
+                let console = crate::external_functions::disable_console_capture();
+                let (has_part_one, has_part_two) = output::is_solution_source(source);
+                let json = output::format_test_json(&test_cases, has_part_one, has_part_two, console);
+                println!("{}", json);
+
+                // Determine exit code based on test results
+                let has_failures = test_cases.iter().any(|tc| {
+                    !tc.skipped
+                        && (tc.part_one.as_ref().is_some_and(|p| !p.passed)
+                            || tc.part_two.as_ref().is_some_and(|p| !p.passed))
+                });
+                if has_failures {
+                    std::process::exit(3);
+                }
+                Ok(())
+            }
+            Err(error) => {
+                let _ = crate::external_functions::disable_console_capture();
+                let json = serde_json::to_string(&output::format_error_json(source, &error)).unwrap();
+                println!("{}", json);
+                std::process::exit(2);
+            }
+        },
+        OutputMode::Jsonl => aoc_test_jsonl(source, &mut runner, include_slow),
+    }
+}
+
+fn aoc_test_jsonl(source: &str, runner: &mut AoCRunner<CliTime>, include_slow: bool) -> Result<()> {
+    use output::*;
+    use std::io;
+
+    let mut writer = JsonlWriter::new(io::stdout());
+    let (has_part_one, has_part_two) = is_solution_source(source);
+
+    // We need to determine total tests before running, which requires parsing
+    // For now, run tests and emit initial state with test count
     match runner.test(source, include_slow) {
         Ok(test_cases) => {
-            let mut exit_code = 0;
+            let console = crate::external_functions::disable_console_capture();
+            let total = test_cases.len() as u32;
 
-            for (number, test_case) in test_cases.iter().enumerate() {
-                if number > 0 {
-                    println!()
-                }
-                if test_case.slow {
-                    println!("\x1b[4mTestcase #{}\x1b[0m \x1b[33m(slow)\x1b[0m", number + 1);
+            // Emit initial state
+            let initial_tests: Vec<JsonlTestCaseInitial> = test_cases
+                .iter()
+                .enumerate()
+                .map(|(i, tc)| JsonlTestCaseInitial {
+                    index: (i + 1) as u32,
+                    slow: tc.slow,
+                    status: "pending",
+                    part_one: None,
+                    part_two: None,
+                })
+                .collect();
+
+            let initial = JsonlTestInitial {
+                output_type: "test",
+                status: "pending",
+                success: None,
+                summary: TestSummary {
+                    total,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 0,
+                },
+                tests: initial_tests,
+                console: vec![],
+            };
+            writer.write_initial(&initial)?;
+
+            // Emit running status
+            writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/status", "running")])?;
+
+            // Emit console entries
+            for entry in &console {
+                writer.write_patches(&[JsonlWriter::<io::Stdout>::add_patch("/console/-", entry)])?;
+            }
+
+            // Emit test results
+            let mut passed = 0u32;
+            let mut failed = 0u32;
+            let mut skipped = 0u32;
+
+            for (i, tc) in test_cases.iter().enumerate() {
+                let path_prefix = format!("/tests/{}", i);
+
+                if tc.skipped {
+                    skipped += 1;
+                    writer.write_patches(&[
+                        JsonlWriter::<io::Stdout>::replace_patch(&format!("{}/status", path_prefix), "skipped"),
+                        JsonlWriter::<io::Stdout>::replace_patch("/summary/skipped", skipped),
+                    ])?;
                 } else {
-                    println!("\x1b[4mTestcase #{}\x1b[0m", number + 1);
-                }
+                    // Emit running
+                    writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch(
+                        &format!("{}/status", path_prefix),
+                        "running",
+                    )])?;
 
-                if test_case.part_one.is_none() && test_case.part_two.is_none() {
-                    println!("No expectations");
-                    continue;
-                }
+                    // Determine result
+                    let part_one_passed = tc.part_one.as_ref().is_none_or(|p| p.passed);
+                    let part_two_passed = tc.part_two.as_ref().is_none_or(|p| p.passed);
+                    let all_passed = part_one_passed && part_two_passed;
 
-                if let Some(part_one) = &test_case.part_one {
-                    if part_one.passed {
-                        println!("Part 1: {} \x1b[32m✔\x1b[0m", part_one.actual);
+                    if all_passed {
+                        passed += 1;
                     } else {
-                        println!(
-                            "Part 1: {} \x1b[31m✘ (Expected: {})\x1b[0m",
-                            part_one.actual, part_one.expected
-                        );
-                        exit_code = 3;
+                        failed += 1;
                     }
-                }
 
-                if let Some(part_two) = &test_case.part_two {
-                    if part_two.passed {
-                        println!("Part 2: {} \x1b[32m✔\x1b[0m", part_two.actual);
-                    } else {
-                        println!(
-                            "Part 2: {} \x1b[31m✘ (Expected: {})\x1b[0m",
-                            part_two.actual, part_two.expected
-                        );
-                        exit_code = 3;
+                    // Build patches
+                    let mut patches = vec![JsonlWriter::<io::Stdout>::replace_patch(
+                        &format!("{}/status", path_prefix),
+                        "complete",
+                    )];
+
+                    if has_part_one {
+                        if let Some(p1) = &tc.part_one {
+                            patches.push(JsonlWriter::<io::Stdout>::replace_patch(
+                                &format!("{}/part_one", path_prefix),
+                                JsonTestPartResult {
+                                    passed: p1.passed,
+                                    expected: p1.expected.clone(),
+                                    actual: p1.actual.clone(),
+                                },
+                            ));
+                        }
                     }
+
+                    if has_part_two {
+                        if let Some(p2) = &tc.part_two {
+                            patches.push(JsonlWriter::<io::Stdout>::replace_patch(
+                                &format!("{}/part_two", path_prefix),
+                                JsonTestPartResult {
+                                    passed: p2.passed,
+                                    expected: p2.expected.clone(),
+                                    actual: p2.actual.clone(),
+                                },
+                            ));
+                        }
+                    }
+
+                    if all_passed {
+                        patches.push(JsonlWriter::<io::Stdout>::replace_patch("/summary/passed", passed));
+                    } else {
+                        patches.push(JsonlWriter::<io::Stdout>::replace_patch("/summary/failed", failed));
+                    }
+
+                    writer.write_patches(&patches)?;
                 }
             }
 
-            if exit_code != 0 {
-                std::process::exit(exit_code);
-            }
+            // Emit completion
+            let success = failed == 0;
+            writer.write_patches(&[
+                JsonlWriter::<io::Stdout>::replace_patch("/status", "complete"),
+                JsonlWriter::<io::Stdout>::replace_patch("/success", success),
+            ])?;
 
+            if !success {
+                std::process::exit(3);
+            }
             Ok(())
         }
         Err(error) => {
-            print_error(source_path.unwrap_or("<stdin>"), source, error);
+            let _ = crate::external_functions::disable_console_capture();
+            // Emit error - for tests we need a minimal initial state first
+            let initial = JsonlTestInitial {
+                output_type: "test",
+                status: "pending",
+                success: None,
+                summary: TestSummary {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    skipped: 0,
+                },
+                tests: vec![],
+                console: vec![],
+            };
+            writer.write_initial(&initial)?;
+            writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/status", "running")])?;
+
+            let error_output = format_error_json(source, &error);
+            writer.write_patches(&[
+                JsonlWriter::<io::Stdout>::replace_patch("/status", "error"),
+                JsonlWriter::<io::Stdout>::add_patch("/error", &error_output),
+            ])?;
             std::process::exit(2);
         }
     }

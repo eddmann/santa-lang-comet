@@ -2722,6 +2722,8 @@ dependencies = [
  "predicates",
  "rustyline",
  "santa-lang",
+ "serde",
+ "serde_json",
  "tikv-jemallocator",
  "ureq",
  "url",

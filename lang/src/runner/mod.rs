@@ -65,6 +65,7 @@ pub struct TestCase {
     pub part_one: Option<TestCaseResult>,
     pub part_two: Option<TestCaseResult>,
     pub slow: bool,
+    pub skipped: bool,
 }
 
 #[derive(Debug)]
@@ -162,8 +163,14 @@ impl<T: Time> AoCRunner<T> {
         for (test, attributes) in evaluation.environment.borrow().get_sections_with_attributes("test") {
             let is_slow = Environment::section_has_attribute(&attributes, "slow");
 
-            // Skip slow tests unless explicitly requested
+            // Skip slow tests unless explicitly requested - but still include in results
             if is_slow && !include_slow {
+                results.push(TestCase {
+                    part_one: None,
+                    part_two: None,
+                    slow: true,
+                    skipped: true,
+                });
                 continue;
             }
 
@@ -246,6 +253,7 @@ impl<T: Time> AoCRunner<T> {
                 part_one: part_one_result,
                 part_two: part_two_result,
                 slow: is_slow,
+                skipped: false,
             });
         }
 

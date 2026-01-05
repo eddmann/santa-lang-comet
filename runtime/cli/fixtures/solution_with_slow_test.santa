@@ -1,0 +1,27 @@
+input: read("aoc2015_day01.input")
+
+part_one: {
+    input |> fold(0) |floor, direction| {
+        if direction == "(" { floor + 1 } else { floor - 1 };
+    }
+}
+
+part_two: {
+    zip(1.., input) |> fold(0) |floor, [index, direction]| {
+        let next_floor = if direction == "(" { floor + 1 } else { floor - 1 };
+        if next_floor < 0 { break index } else { next_floor };
+    }
+}
+
+test: {
+    input: "()())"
+    part_one: -1
+    part_two: 5
+}
+
+@slow
+test: {
+    input: "()()()(((((((((((((((((((((((((((((((((((((((()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()((()))"
+    part_one: 39
+    part_two: 39
+}

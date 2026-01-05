@@ -1,10 +1,54 @@
 #![allow(clippy::collapsible_if)]
 
+use crate::output::ConsoleEntry;
 use santa_lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
+use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use url::Url;
+
+thread_local! {
+    /// Console buffer for capturing puts() output in JSON/JSONL mode.
+    /// When Some, puts() will append to this buffer instead of printing.
+    static CONSOLE_BUFFER: RefCell<Option<Vec<ConsoleEntry>>> = const { RefCell::new(None) };
+
+    /// Start time for calculating timestamps in console entries.
+    static START_TIME_MS: RefCell<u128> = const { RefCell::new(0) };
+}
+
+/// Enable console capture mode. Returns any previously captured entries.
+pub fn enable_console_capture() -> Vec<ConsoleEntry> {
+    let start = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis();
+
+    START_TIME_MS.with(|t| *t.borrow_mut() = start);
+    CONSOLE_BUFFER.with(|buf| buf.borrow_mut().replace(Vec::new()).unwrap_or_default())
+}
+
+/// Disable console capture and return captured entries.
+pub fn disable_console_capture() -> Vec<ConsoleEntry> {
+    CONSOLE_BUFFER.with(|buf| buf.borrow_mut().take().unwrap_or_default())
+}
+
+/// Check if console capture is enabled.
+#[allow(dead_code)]
+pub fn is_console_capture_enabled() -> bool {
+    CONSOLE_BUFFER.with(|buf| buf.borrow().is_some())
+}
+
+/// Get current timestamp in milliseconds since capture started.
+fn get_timestamp_ms() -> u64 {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis();
+
+    START_TIME_MS.with(|t| (now - *t.borrow()) as u64)
+}
 
 pub fn definitions() -> Vec<ExternalFnDef> {
     vec![
@@ -21,13 +65,49 @@ pub fn definitions() -> Vec<ExternalFnDef> {
     ]
 }
 
+/// Format an object value for puts() output.
+/// Strings are displayed without surrounding quotes (unlike Display trait).
+fn format_puts_value(value: &Object) -> String {
+    match value {
+        Object::String(s) => s.clone(),
+        other => other.to_string(),
+    }
+}
+
 fn puts(arguments: Arguments, _source: Location) -> Evaluation {
     match &**arguments.get("values").unwrap() {
         Object::List(values) => {
-            for value in values {
-                print!("{} ", value);
+            // Skip if no values (spec says no event for puts with no args)
+            if values.is_empty() {
+                return Ok(Rc::new(Object::Nil));
             }
-            println!();
+
+            // Build the message string (space-separated values)
+            // Use format_puts_value to avoid quotes around strings
+            let message: String = values
+                .iter()
+                .map(|v| format_puts_value(v))
+                .collect::<Vec<_>>()
+                .join(" ");
+
+            // Check if we should capture or print
+            let captured = CONSOLE_BUFFER.with(|buf| {
+                if let Some(ref mut buffer) = *buf.borrow_mut() {
+                    buffer.push(ConsoleEntry {
+                        timestamp_ms: get_timestamp_ms(),
+                        message: message.clone(),
+                    });
+                    true
+                } else {
+                    false
+                }
+            });
+
+            if !captured {
+                // Print to stdout as normal
+                println!("{}", message);
+            }
+
             Ok(Rc::new(Object::Nil))
         }
         _ => unreachable!(),

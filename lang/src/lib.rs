@@ -11,4 +11,4 @@ pub use crate::evaluator::{Arguments, Environment, Evaluation, Evaluator, Extern
 pub use crate::formatter::{format, is_formatted};
 pub use crate::lexer::{Lexer, Location, TokenKind};
 pub use crate::parser::{Parser, ParserErr, ast::ExpressionKind};
-pub use crate::runner::{AoCRunner, RunErr, RunEvaluation, Time};
+pub use crate::runner::{AoCRunner, RunErr, RunEvaluation, RunResult, TestCase, Time};

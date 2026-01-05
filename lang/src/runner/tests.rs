@@ -158,6 +158,7 @@ fn passing_test_case_with_both_parts() {
                             },
                         ),
                         slow: false,
+                        skipped: false,
                     },
                 ],
             )"#]],
@@ -192,6 +193,7 @@ fn passing_test_case_with_part_one() {
                         ),
                         part_two: None,
                         slow: false,
+                        skipped: false,
                     },
                 ],
             )"#]],
@@ -227,6 +229,7 @@ fn passing_test_case_with_part_two() {
                             },
                         ),
                         slow: false,
+                        skipped: false,
                     },
                 ],
             )"#]],
@@ -275,6 +278,7 @@ fn failing_test_case_with_both_parts() {
                             },
                         ),
                         slow: false,
+                        skipped: false,
                     },
                 ],
             )"#]],
@@ -527,6 +531,7 @@ fn slow_test_is_included_when_flag_set() {
                         ),
                         part_two: None,
                         slow: true,
+                        skipped: false,
                     },
                 ],
             )"#]],
@@ -548,7 +553,14 @@ fn slow_test_is_skipped_by_default() {
         false,
         expect![[r#"
             Ok(
-                [],
+                [
+                    TestCase {
+                        part_one: None,
+                        part_two: None,
+                        slow: true,
+                        skipped: true,
+                    },
+                ],
             )"#]],
     )
 }
@@ -584,6 +596,13 @@ fn mixed_slow_and_normal_tests() {
                         ),
                         part_two: None,
                         slow: false,
+                        skipped: false,
+                    },
+                    TestCase {
+                        part_one: None,
+                        part_two: None,
+                        slow: true,
+                        skipped: true,
                     },
                 ],
             )"#]],
@@ -621,6 +640,7 @@ fn mixed_slow_and_normal_tests_with_include_slow() {
                         ),
                         part_two: None,
                         slow: false,
+                        skipped: false,
                     },
                     TestCase {
                         part_one: Some(
@@ -632,6 +652,7 @@ fn mixed_slow_and_normal_tests_with_include_slow() {
                         ),
                         part_two: None,
                         slow: true,
+                        skipped: false,
                     },
                 ],
             )"#]],
