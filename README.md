@@ -1,4 +1,4 @@
-<p align="center"><a href="https://eddmann.com/santa-lang/"><img src="./logo.png" alt="santa-lang" width="400px" /></a></p>
+<p align="center"><a href="https://eddmann.com/santa-lang/"><img src="./docs/logo.png" alt="santa-lang" width="400px" /></a></p>
 
 # santa-lang Comet
 
