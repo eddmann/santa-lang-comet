@@ -256,7 +256,7 @@ lambda/invoke: ## Test Lambda endpoint
 .PHONY: php-ext/build
 php-ext/build: ## Build PHP extension
 	@docker build -t local/santa-php-ext-build - < runtime/php-ext/build.Dockerfile
-	@$(DOCKER) local/santa-php-ext-build bash -c "cargo build --package santa-php-ext --release"
+	@$(DOCKER) local/santa-php-ext-build bash -c "cargo build --package php-ext --release"
 
 .PHONY: php-ext/test
 php-ext/test: ## Test PHP extension
