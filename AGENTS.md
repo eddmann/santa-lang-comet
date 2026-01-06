@@ -8,27 +8,36 @@ This is **Comet**, a santa-lang reindeer implementation. santa-lang is a functio
 - Workspace with core language library (`lang/`) and multiple runtime targets (CLI, WASM, Lambda, PHP ext, Jupyter)
 - Batteries-included standard library for AoC patterns
 
+## Makefile
+
+**Always use Makefile targets.** Never run build tools directly.
+
+- Run `make help` to see all available targets
+- `make fmt` for code formatting
+- `make test` for running tests
+- `make can-release` before submitting a PR (runs lint + all tests)
+
+This ensures consistent, reproducible builds across all environments (Docker, CI, local).
+
 ## Setup
 
 ```bash
 # Requires Docker (recommended)
 make shell              # Enter build environment
-
-# Or local Rust 1.85+
-cargo build --release --bin santa-cli
+make build              # Build the project
 ```
 
 ## Common Commands
 
 ```bash
-make help               # Show all targets
-make fmt                # Format code
+make help               # Show available targets
+make fmt                # Format code (rustfmt)
 make lint               # Run rustfmt check + clippy
 make test               # Run all tests (lang, CLI, WASM)
 make test/lang          # Test core language only
 make test/cli           # Test CLI only
 make test/wasm          # Test WebAssembly (runs on host)
-make can-release        # Full CI: lint + test
+make can-release        # Run before submitting PR (lint + all tests)
 make bench/build        # Build benchmark Docker image
 make bench/run          # Run hyperfine benchmarks
 make lambda/build       # Build Lambda runtime
@@ -46,13 +55,7 @@ make jupyter/build      # Build Jupyter kernel
 
 ## Tests & CI
 
-```bash
-make test/lang          # Docker-based language tests
-make test/cli           # Docker-based CLI tests
-make test/wasm          # Host-based WASM tests (requires wasm-pack, node 22)
-```
-
-- **CI** (`test.yml`): Runs test-lang, test-cli, test-wasm on ubuntu-24.04
+- **CI** (`test.yml`): Runs `make can-release` on ubuntu-24.04
 - **Build** (`build.yml`): Multi-platform CLI builds, Docker, WASM npm package
 - Auto-updates `draft-release` branch after tests pass on main
 
