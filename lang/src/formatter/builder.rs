@@ -375,9 +375,7 @@ fn build_prefix_expr(operator: &Prefix, right: &Expression) -> Doc {
     let right_doc = build_expression(right);
     let needs_parens = matches!(
         right.kind,
-        ExpressionKind::Infix { .. }
-            | ExpressionKind::FunctionThread { .. }
-            | ExpressionKind::FunctionComposition(_)
+        ExpressionKind::Infix { .. } | ExpressionKind::FunctionThread { .. } | ExpressionKind::FunctionComposition(_)
     );
     if needs_parens {
         Doc::concat(vec![build_prefix(operator), Doc::text("("), right_doc, Doc::text(")")])
@@ -476,9 +474,7 @@ fn build_chain(initial: &Expression, functions: &[Expression], op: &str) -> Doc 
             // Lambdas that aren't the last element need block braces to prevent
             // the next pipe from being parsed as part of the lambda body
             let f_doc = match &f.kind {
-                ExpressionKind::Function { parameters, body } if !is_last => {
-                    build_lambda_with_block(parameters, body)
-                }
+                ExpressionKind::Function { parameters, body } if !is_last => build_lambda_with_block(parameters, body),
                 _ => build_expression(f),
             };
             Doc::concat(vec![

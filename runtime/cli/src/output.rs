@@ -4,7 +4,7 @@
 //! It provides machine-readable output formats for integration with editors, CI systems,
 //! and other tools.
 
-use santa_lang::{Location, RunErr, RunEvaluation, TestCase};
+use lang::{Location, RunErr, RunEvaluation, TestCase};
 use serde::Serialize;
 use std::io::{self, Write};
 
@@ -203,11 +203,7 @@ fn extract_function_name(source: &str, location: Location) -> String {
         .take_while(|c| c.is_alphanumeric() || *c == '_')
         .collect();
 
-    if name.is_empty() {
-        "<lambda>".to_string()
-    } else {
-        name
-    }
+    if name.is_empty() { "<lambda>".to_string() } else { name }
 }
 
 /// Format run evaluation result as JSON.
@@ -459,10 +455,7 @@ mod tests {
         // Position 6 = 'l' at line 2, col 1
         assert_eq!(calculate_line_column(source, Location { start: 6, end: 7 }), (2, 1));
         // Position 12 = 'l' at line 3, col 1
-        assert_eq!(
-            calculate_line_column(source, Location { start: 12, end: 13 }),
-            (3, 1)
-        );
+        assert_eq!(calculate_line_column(source, Location { start: 12, end: 13 }), (3, 1));
     }
 
     #[test]
@@ -483,10 +476,7 @@ mod tests {
     fn test_is_solution_source() {
         assert_eq!(is_solution_source("part_one: { 42 }"), (true, false));
         assert_eq!(is_solution_source("part_two: { 42 }"), (false, true));
-        assert_eq!(
-            is_solution_source("part_one: { 1 }\npart_two: { 2 }"),
-            (true, true)
-        );
+        assert_eq!(is_solution_source("part_one: { 1 }\npart_two: { 2 }"), (true, true));
         assert_eq!(is_solution_source("1 + 2"), (false, false));
     }
 }

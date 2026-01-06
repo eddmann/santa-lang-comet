@@ -1,6 +1,6 @@
 #![allow(clippy::collapsible_if)]
 
-use santa_lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
+use lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
 use std::fs;
 use std::rc::Rc;
 

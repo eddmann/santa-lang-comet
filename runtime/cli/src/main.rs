@@ -7,9 +7,9 @@ mod output;
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use getopts::Options;
+use lang::{AoCRunner, Environment, Evaluator, Lexer, Location, Object, Parser, RunErr, RunEvaluation, Time};
 use output::OutputMode;
 use rustyline::DefaultEditor;
-use santa_lang::{AoCRunner, Environment, Evaluator, Lexer, Location, Object, Parser, RunErr, RunEvaluation, Time};
 use std::fs;
 use std::io::Read;
 use std::rc::Rc;
@@ -293,9 +293,7 @@ fn aoc_run(source: &str, source_path: Option<&str>, output_mode: OutputMode) -> 
                 std::process::exit(2);
             }
         },
-        OutputMode::Jsonl => {
-            aoc_run_jsonl(source, &mut runner)
-        }
+        OutputMode::Jsonl => aoc_run_jsonl(source, &mut runner),
     }
 }
 
@@ -370,14 +368,20 @@ fn aoc_run_jsonl(source: &str, runner: &mut AoCRunner<CliTime>) -> Result<()> {
                         JsonlWriter::<io::Stdout>::replace_patch("/duration_ms", r.duration as u64),
                     ])?;
                 }
-                RunEvaluation::Solution { ref part_one, ref part_two } => {
+                RunEvaluation::Solution {
+                    ref part_one,
+                    ref part_two,
+                } => {
                     // Emit console entries first
                     for entry in &console {
                         writer.write_patches(&[JsonlWriter::<io::Stdout>::add_patch("/console/-", entry)])?;
                     }
 
                     if let Some(p1) = part_one {
-                        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/part_one/status", "running")])?;
+                        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch(
+                            "/part_one/status",
+                            "running",
+                        )])?;
                         writer.write_patches(&[
                             JsonlWriter::<io::Stdout>::replace_patch("/part_one/status", "complete"),
                             JsonlWriter::<io::Stdout>::replace_patch("/part_one/value", &p1.value),
@@ -386,7 +390,10 @@ fn aoc_run_jsonl(source: &str, runner: &mut AoCRunner<CliTime>) -> Result<()> {
                     }
 
                     if let Some(p2) = part_two {
-                        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch("/part_two/status", "running")])?;
+                        writer.write_patches(&[JsonlWriter::<io::Stdout>::replace_patch(
+                            "/part_two/status",
+                            "running",
+                        )])?;
                         writer.write_patches(&[
                             JsonlWriter::<io::Stdout>::replace_patch("/part_two/status", "complete"),
                             JsonlWriter::<io::Stdout>::replace_patch("/part_two/value", &p2.value),
@@ -693,7 +700,7 @@ fn handle_format(matches: &getopts::Matches, to_stdout: bool, write_file: bool, 
         std::process::exit(1);
     };
 
-    match santa_lang::format(&source) {
+    match lang::format(&source) {
         Ok(formatted) => {
             if check_only {
                 if formatted == source {

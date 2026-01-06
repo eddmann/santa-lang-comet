@@ -1,5 +1,5 @@
 [package]
-name = "santa-cli"
+name = "cli"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -13,7 +13,7 @@ path = "src/main.rs"
 atty = "0.2.14"
 getopts = "0.2.21"
 rustyline = "15.0.0"
-santa-lang = { path = "../../lang", version = "*", features = ["serde"] }
+lang = { path = "../../lang", version = "*", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tikv-jemallocator = "0.6.0"

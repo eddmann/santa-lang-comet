@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use santa_lang::{Evaluator, Lexer, Parser};
+use lang::{Evaluator, Lexer, Parser};
 
 fn parse_and_eval(input: &str) -> Result<String, String> {
     let lexer = Lexer::new(input);

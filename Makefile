@@ -9,6 +9,26 @@ help: ## Display this help message
 
 ##@ Development
 
+.PHONY: build
+build: ## Build CLI (debug)
+	@$(DOCKER) $(IMAGE) cargo build -p cli
+
+.PHONY: release
+release: ## Build CLI (release)
+	@$(DOCKER) $(IMAGE) cargo build --release -p cli
+
+.PHONY: run
+run: ## Run a script (FILE=path/to/script.santa)
+	@$(DOCKER) $(IMAGE) cargo run -p cli -- $(FILE)
+
+.PHONY: run-test
+run-test: ## Run script in test mode (FILE=path)
+	@$(DOCKER) $(IMAGE) cargo run -p cli -- -t $(FILE)
+
+.PHONY: repl
+repl: ## Start interactive REPL
+	@$(DOCKER) -it $(IMAGE) cargo run -p cli -- -r
+
 .PHONY: shell
 shell: ## Interactive shell in Docker build environment
 	@$(DOCKER) -it $(IMAGE) bash
@@ -34,7 +54,7 @@ test: test/lang test/cli test/wasm ## Run all tests (lang, CLI, WASM)
 
 .PHONY: test/lang
 test/lang: ## Test core language only
-	@$(DOCKER) $(IMAGE) cargo test --package santa-lang --verbose
+	@$(DOCKER) $(IMAGE) cargo test --package lang --verbose
 
 .PHONY: test/cli
 test/cli: ## Test CLI only
@@ -79,7 +99,7 @@ bench/shell: ## Open interactive shell in benchmark Docker container
 bench/criterion: ## Run Criterion microbenchmarks in Docker
 	@echo "Running Criterion microbenchmarks in Docker..."
 	@mkdir -p benchmarks/results
-	@$(BENCH_DOCKER) bash -c "cargo bench --package santa-lang-benchmarks"
+	@$(BENCH_DOCKER) bash -c "cargo bench --package lang-benchmarks"
 
 .PHONY: bench/run
 bench/run: ## Run hyperfine benchmarks on all fixtures

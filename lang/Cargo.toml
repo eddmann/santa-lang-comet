@@ -1,5 +1,5 @@
 [package]
-name = "santa-lang"
+name = "lang"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true

@@ -1,5 +1,5 @@
 use js_sys::{Array as JsArray, Function, Object as JsObject};
-use santa_lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, RuntimeErr};
+use lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, RuntimeErr};
 use std::rc::Rc;
 use wasm_bindgen::prelude::JsValue;
 

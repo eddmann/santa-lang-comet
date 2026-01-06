@@ -1,5 +1,5 @@
 [package]
-name = "santa-lambda"
+name = "lambda"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -12,5 +12,5 @@ path = "src/main.rs"
 [dependencies]
 serde = "1.0.217"
 serde_json = "1.0.133"
-santa-lang = { path = "../../lang", version = "*", features = ["serde"] }
+lang = { path = "../../lang", version = "*", features = ["serde"] }
 ureq = { version = "2.12.1", features = ["json"] }

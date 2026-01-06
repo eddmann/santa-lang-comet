@@ -1,7 +1,7 @@
 #![allow(clippy::collapsible_if)]
 
 use crate::output::ConsoleEntry;
-use santa_lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
+use lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
 use std::cell::RefCell;
 use std::env;
 use std::fs;

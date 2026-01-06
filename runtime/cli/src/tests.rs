@@ -198,12 +198,7 @@ fn json_script_simple() {
 fn json_script_with_console() {
     #[allow(deprecated)]
     let mut cmd = Command::cargo_bin("santa-cli").unwrap();
-    let assert = cmd
-        .arg("-o")
-        .arg("json")
-        .arg("-e")
-        .arg(r#"puts("hello"); 42"#)
-        .assert();
+    let assert = cmd.arg("-o").arg("json").arg("-e").arg(r#"puts("hello"); 42"#).assert();
     assert
         .success()
         .stdout(predicate::str::contains(r#""type":"script""#))
@@ -232,12 +227,7 @@ fn json_solution() {
 fn json_solution_single_part() {
     #[allow(deprecated)]
     let mut cmd = Command::cargo_bin("santa-cli").unwrap();
-    let assert = cmd
-        .arg("-o")
-        .arg("json")
-        .arg("-e")
-        .arg("part_one: { 42 }")
-        .assert();
+    let assert = cmd.arg("-o").arg("json").arg("-e").arg("part_one: { 42 }").assert();
     assert
         .success()
         .stdout(predicate::str::contains(r#""type":"solution""#))
@@ -381,12 +371,7 @@ fn jsonl_script_simple() {
 fn jsonl_solution() {
     #[allow(deprecated)]
     let mut cmd = Command::cargo_bin("santa-cli").unwrap();
-    let assert = cmd
-        .arg("-o")
-        .arg("jsonl")
-        .arg("-e")
-        .arg("part_one: { 42 }")
-        .assert();
+    let assert = cmd.arg("-o").arg("jsonl").arg("-e").arg("part_one: { 42 }").assert();
     assert
         .success()
         .stdout(predicate::str::contains(r#""type":"solution""#))
@@ -398,12 +383,7 @@ fn jsonl_solution() {
 fn jsonl_error() {
     #[allow(deprecated)]
     let mut cmd = Command::cargo_bin("santa-cli").unwrap();
-    let assert = cmd
-        .arg("-o")
-        .arg("jsonl")
-        .arg("-e")
-        .arg(r#"1 * "x""#)
-        .assert();
+    let assert = cmd.arg("-o").arg("jsonl").arg("-e").arg(r#"1 * "x""#).assert();
     assert
         .code(2)
         .stdout(predicate::str::contains(r#""type":"script""#))

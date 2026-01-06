@@ -9,7 +9,7 @@ authors = ["Edd Mann <the@eddmann.com>"]
 documentation = "https://eddmann.com/santa-lang/"
 
 [profile.release]
-strip = true
-codegen-units = 1
 lto = true
-#debug = 1
+codegen-units = 1
+opt-level = 3
+strip = true

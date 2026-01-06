@@ -2,7 +2,7 @@ mod external_functions;
 
 use ext_php_rs::prelude::*;
 use ext_php_rs::types::{ZendHashTable, Zval};
-use santa_lang::{AoCRunner, Environment, Evaluator, Lexer, Parser, RunEvaluation, Time};
+use lang::{AoCRunner, Environment, Evaluator, Lexer, Parser, RunEvaluation, Time};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 struct PhpTime {}

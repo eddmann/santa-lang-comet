@@ -1,7 +1,7 @@
 mod external_functions;
 mod handler;
 
-use santa_lang::Object;
+use lang::Object;
 use std::collections::HashMap;
 use std::env;
 use std::rc::Rc;

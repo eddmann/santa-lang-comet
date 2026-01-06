@@ -1,7 +1,7 @@
 mod external_functions;
 
 use js_sys::{Array, Object};
-use santa_lang::{AoCRunner, Environment, Evaluator, Lexer, Parser, Time};
+use lang::{AoCRunner, Environment, Evaluator, Lexer, Parser, Time};
 use wasm_bindgen::prelude::{JsValue, wasm_bindgen};
 
 #[cfg(test)]
@@ -71,7 +71,7 @@ pub fn evaluate(expression: &str, js_functions: Option<Object>) -> Result<JsValu
 
 #[wasm_bindgen]
 pub fn format(source: &str) -> Result<JsValue, JsValue> {
-    match santa_lang::format(source) {
+    match lang::format(source) {
         Ok(formatted) => Ok(JsValue::from_str(&formatted)),
         Err(error) => Err(serde_wasm_bindgen::to_value(&error).unwrap()),
     }
@@ -79,7 +79,7 @@ pub fn format(source: &str) -> Result<JsValue, JsValue> {
 
 #[wasm_bindgen]
 pub fn is_formatted(source: &str) -> Result<bool, JsValue> {
-    match santa_lang::is_formatted(source) {
+    match lang::is_formatted(source) {
         Ok(result) => Ok(result),
         Err(error) => Err(serde_wasm_bindgen::to_value(&error).unwrap()),
     }

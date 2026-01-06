@@ -1,4 +1,4 @@
-use santa_lang::{Environment, Evaluator, Lexer, Object, Parser};
+use lang::{Environment, Evaluator, Lexer, Object, Parser};
 use std::env;
 use std::rc::Rc;
 

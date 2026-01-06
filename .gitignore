@@ -1,4 +1,5 @@
 /target
-/.cargo
+/.cargo/*
+!/.cargo/config.toml
 /site
 /benchmarks/results

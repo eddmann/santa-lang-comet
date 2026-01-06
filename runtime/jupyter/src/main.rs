@@ -1,7 +1,7 @@
 use clap::Parser as ClapParser;
 use clap_derive::{Parser, Subcommand};
 use jupyter::*;
-use santa_lang::{Environment, Evaluator, Lexer, Parser};
+use lang::{Environment, Evaluator, Lexer, Parser};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;

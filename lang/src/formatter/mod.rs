@@ -50,7 +50,7 @@ use crate::parser::{Parser, ParserErr};
 /// # Examples
 ///
 /// ```ignore
-/// use santa_lang::format;
+/// use lang::format;
 ///
 /// let ugly = "let x=1+2";
 /// let pretty = format(ugly).unwrap();
@@ -80,7 +80,7 @@ pub fn format(source: &str) -> Result<String, ParserErr> {
 /// # Examples
 ///
 /// ```ignore
-/// use santa_lang::is_formatted;
+/// use lang::is_formatted;
 ///
 /// assert!(is_formatted("let x = 1 + 2\n").unwrap());
 /// assert!(!is_formatted("let x=1+2").unwrap());

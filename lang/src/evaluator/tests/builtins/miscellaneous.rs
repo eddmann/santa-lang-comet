@@ -28,4 +28,3 @@ test_eval! {
     ("id(1.5)", "1.5", decimal),
     ("id(\"\")", "\"\"", string)
 }
-

@@ -1,5 +1,5 @@
 use ext_php_rs::{php_print, php_println};
-use santa_lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
+use lang::{Arguments, Evaluation, ExpressionKind, ExternalFnDef, Location, Object, RuntimeErr};
 use std::env;
 use std::fs;
 use std::rc::Rc;

@@ -1,5 +1,5 @@
 [package]
-name = "santa-jupyter"
+name = "jupyter"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -10,7 +10,7 @@ name = "santa-jupyter"
 path = "src/main.rs"
 
 [dependencies]
-santa-lang = { path = "../../lang", version = "*" }
+lang = { path = "../../lang", version = "*" }
 jupyter = "0.1.9"
 jupyter-derive = "0.0.2"
 clap = "4.5.23"

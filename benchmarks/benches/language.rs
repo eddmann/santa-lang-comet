@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use santa_lang::{Lexer, Parser, TokenKind};
+use lang::{Lexer, Parser, TokenKind};
 
 fn bench_lexer(c: &mut Criterion) {
     let mut group = c.benchmark_group("lexer");

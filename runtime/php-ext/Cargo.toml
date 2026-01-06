@@ -1,5 +1,5 @@
 [package]
-name = "santa-php-ext"
+name = "php-ext"
 version.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -12,6 +12,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ext-php-rs = "0.13.0"
-santa-lang = { path = "../../lang", version = "*" }
+lang = { path = "../../lang", version = "*" }
 ureq = "2.12.1"
 url = "2.5.4"
