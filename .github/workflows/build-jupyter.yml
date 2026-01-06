@@ -23,7 +23,7 @@ jobs:
             os: ubuntu-24.04
           - platform: macos-amd64
             target: x86_64-apple-darwin
-            os: macos-14
+            os: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4

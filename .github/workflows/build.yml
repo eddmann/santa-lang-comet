@@ -19,43 +19,58 @@ jobs:
     steps:
       - name: Update release content
         id: update-release-content
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commitish: 'draft-release'
 
   cli:
-    needs: update-draft-release
     name: Build CLI
-    uses: eddmann/santa-lang-comet/.github/workflows/build-cli.yml@draft-release
+    needs: update-draft-release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-cli.yml
     with:
       release-tag: ${{ needs.update-draft-release.outputs.tag_name }}
+    secrets: inherit
 
   lambda:
-    needs: update-draft-release
     name: Build Lambda
-    uses: eddmann/santa-lang-comet/.github/workflows/build-lambda.yml@draft-release
+    needs: update-draft-release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-lambda.yml
     with:
       release-tag: ${{ needs.update-draft-release.outputs.tag_name }}
+    secrets: inherit
 
   wasm:
-    needs: update-draft-release
     name: Build WebAssembly
-    uses: eddmann/santa-lang-comet/.github/workflows/build-wasm.yml@draft-release
+    needs: update-draft-release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-wasm.yml
     with:
       release-tag: ${{ needs.update-draft-release.outputs.tag_name }}
+    secrets: inherit
 
   php-ext:
-    needs: update-draft-release
     name: Build PHP extension
-    uses: eddmann/santa-lang-comet/.github/workflows/build-php-ext.yml@draft-release
+    needs: update-draft-release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-php-ext.yml
     with:
       release-tag: ${{ needs.update-draft-release.outputs.tag_name }}
+    secrets: inherit
 
   jupyter:
-    needs: update-draft-release
     name: Build Jupyter Kernel
-    uses: eddmann/santa-lang-comet/.github/workflows/build-jupyter.yml@draft-release
+    needs: update-draft-release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-jupyter.yml
     with:
       release-tag: ${{ needs.update-draft-release.outputs.tag_name }}
+    secrets: inherit

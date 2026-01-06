@@ -24,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: runtime/cli/build.Dockerfile
@@ -60,10 +60,10 @@ jobs:
             os: ubuntu-24.04
           - platform: macos-amd64
             target: x86_64-apple-darwin
-            os: macos-14
+            os: macos-15
           - platform: macos-arm64
             target: aarch64-apple-darwin
-            os: macos-14
+            os: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
