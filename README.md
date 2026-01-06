@@ -213,3 +213,7 @@ The language has been implemented multiple times to explore different execution 
 | [Donner](https://github.com/eddmann/santa-lang-donner) | JVM bytecode compiler | Kotlin |
 | [Vixen](https://github.com/eddmann/santa-lang-vixen) | Embedded bytecode VM | C |
 | [Prancer](https://github.com/eddmann/santa-lang-prancer) | Tree-walking interpreter | TypeScript |
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
