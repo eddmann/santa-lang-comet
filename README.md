@@ -6,17 +6,37 @@ Tree-walking interpreter implementation of [santa-lang](https://eddmann.com/sant
 
 ## Overview
 
-santa-lang is a functional, expression-oriented programming language designed for solving Advent of Code puzzles. This Rust implementation provides:
+santa-lang is a functional, expression-oriented programming language designed for solving Advent of Code puzzles. This Rust implementation provides a tree-walking interpreter.
 
-- Tree-walking interpreter with tail-call optimization (TCO)
+All santa-lang implementations support the same language features:
+
+- First-class functions and closures with tail-call optimization
+- Pipeline and composition operators for expressive data flow
 - Persistent immutable data structures
-- First-class functions and closures
 - Lazy sequences and infinite ranges
 - Pattern matching with guards
-- [70+ built-in functions](https://eddmann.com/santa-lang/builtins/)
+- [Rich built-in function library](https://eddmann.com/santa-lang/builtins/)
 - AoC runner with automatic input fetching
 
 Multiple runtime targets are available: CLI, WebAssembly, AWS Lambda, PHP extension, and Jupyter kernel.
+
+## Architecture
+
+```
+Source Code → Lexer → Parser → Evaluator → Result
+                                   ↓
+                           Environment (Scopes)
+```
+
+| Component       | Description                                              |
+| --------------- | -------------------------------------------------------- |
+| **Lexer**       | Tokenizes source into keywords, operators, literals      |
+| **Parser**      | Builds an Abstract Syntax Tree (AST)                     |
+| **Evaluator**   | Tree-walking interpreter that executes the AST           |
+| **Environment** | Manages variable bindings and closures across scopes     |
+| **Builtins**    | Rich library of built-in functions                       |
+
+For detailed implementation internals, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Installation
 
@@ -116,8 +136,11 @@ Key language features shown:
 Requires Rust 1.85+ or use Docker:
 
 ```bash
-# Build CLI
-cargo build --release --bin santa-cli
+# Build CLI (debug)
+make build
+
+# Build CLI (release)
+make release
 
 # Run tests
 make test
@@ -167,7 +190,9 @@ make bench/compare V1=main V2=HEAD  # Compare versions
 │   └── src/
 │       ├── lexer/         # Tokenization
 │       ├── parser/        # AST construction
-│       └── evaluator/     # Tree-walking interpreter
+│       ├── evaluator/     # Tree-walking interpreter
+│       ├── formatter/     # Code formatting
+│       └── runner/        # AoC runner support
 ├── runtime/
 │   ├── cli/               # Command-line interface
 │   ├── wasm/              # WebAssembly target
@@ -177,10 +202,15 @@ make bench/compare V1=main V2=HEAD  # Compare versions
 └── benchmarks/            # Performance benchmarks
 ```
 
-## See Also
+## Other Reindeer
 
-- [eddmann/santa-lang](https://github.com/eddmann/santa-lang) - Language specification/documentation
-- [eddmann/santa-lang-editor](https://github.com/eddmann/santa-lang-editor) - Web-based editor
-- [eddmann/santa-lang-prancer](https://github.com/eddmann/santa-lang-prancer) - Tree-walking interpreter in TypeScript (Prancer)
-- [eddmann/santa-lang-comet](https://github.com/eddmann/santa-lang-comet) - Tree-walking interpreter in Rust (Comet)
-- [eddmann/santa-lang-blitzen](https://github.com/eddmann/santa-lang-blitzen) - Bytecode VM in Rust (Blitzen)
+The language has been implemented multiple times to explore different execution models and technologies.
+
+| Codename | Type | Language |
+|----------|------|----------|
+| [Comet](https://github.com/eddmann/santa-lang-comet) | Tree-walking interpreter | Rust |
+| [Blitzen](https://github.com/eddmann/santa-lang-blitzen) | Bytecode VM | Rust |
+| [Dasher](https://github.com/eddmann/santa-lang-dasher) | LLVM native compiler | Rust |
+| [Donner](https://github.com/eddmann/santa-lang-donner) | JVM bytecode compiler | Kotlin |
+| [Vixen](https://github.com/eddmann/santa-lang-vixen) | Embedded bytecode VM | C |
+| [Prancer](https://github.com/eddmann/santa-lang-prancer) | Tree-walking interpreter | TypeScript |
