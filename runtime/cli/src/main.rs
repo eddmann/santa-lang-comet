@@ -56,7 +56,18 @@ fn main() -> Result<()> {
     }
 
     if matches.opt_present("v") {
-        println!("santa-lang Comet {}", env!("CARGO_PKG_VERSION"));
+        match output_mode {
+            OutputMode::Text => {
+                println!("santa-lang Comet {}", env!("CARGO_PKG_VERSION"));
+            }
+            OutputMode::Json | OutputMode::Jsonl => {
+                let output = output::JsonVersionOutput {
+                    reindeer: "Comet",
+                    version: env!("CARGO_PKG_VERSION"),
+                };
+                println!("{}", serde_json::to_string(&output).unwrap());
+            }
+        }
         return Ok(());
     }
 

@@ -8,6 +8,13 @@ use lang::{Location, RunErr, RunEvaluation, TestCase};
 use serde::Serialize;
 use std::io::{self, Write};
 
+/// JSON output for version information.
+#[derive(Debug, Clone, Serialize)]
+pub struct JsonVersionOutput {
+    pub reindeer: &'static str,
+    pub version: &'static str,
+}
+
 /// Output mode for CLI execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputMode {

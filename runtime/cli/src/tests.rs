@@ -417,3 +417,38 @@ fn invalid_output_mode() {
     let assert = cmd.arg("-o").arg("xml").arg("-e").arg("1").assert();
     assert.code(1).stderr(predicate::str::contains("Invalid output format"));
 }
+
+// Version with JSON output format tests
+
+#[test]
+fn version_json_output() {
+    #[allow(deprecated)]
+    let mut cmd = Command::cargo_bin("santa-cli").unwrap();
+    let assert = cmd.arg("--version").arg("-o").arg("json").assert();
+    assert
+        .success()
+        .stdout(predicate::str::contains(r#""reindeer":"Comet""#))
+        .stdout(predicate::str::contains(r#""version":"#));
+}
+
+#[test]
+fn version_jsonl_output() {
+    #[allow(deprecated)]
+    let mut cmd = Command::cargo_bin("santa-cli").unwrap();
+    let assert = cmd.arg("--version").arg("-o").arg("jsonl").assert();
+    assert
+        .success()
+        .stdout(predicate::str::contains(r#""reindeer":"Comet""#))
+        .stdout(predicate::str::contains(r#""version":"#));
+}
+
+#[test]
+fn version_json_output_flag_order() {
+    #[allow(deprecated)]
+    let mut cmd = Command::cargo_bin("santa-cli").unwrap();
+    let assert = cmd.arg("-o").arg("json").arg("--version").assert();
+    assert
+        .success()
+        .stdout(predicate::str::contains(r#""reindeer":"Comet""#))
+        .stdout(predicate::str::contains(r#""version":"#));
+}
