@@ -155,6 +155,87 @@ impl<T: Time> AoCRunner<T> {
         })
     }
 
+    /// Run a solution with callbacks for progress streaming.
+    ///
+    /// Callbacks are invoked at key points:
+    /// - `on_part_one_start`: Called before part_one evaluation begins
+    /// - `on_part_one_complete`: Called after part_one completes with its result
+    /// - `on_part_two_start`: Called before part_two evaluation begins
+    /// - `on_part_two_complete`: Called after part_two completes with its result
+    pub fn run_streaming<F1, F2, F3, F4>(
+        &mut self,
+        source: &str,
+        mut on_part_one_start: F1,
+        mut on_part_one_complete: F2,
+        mut on_part_two_start: F3,
+        mut on_part_two_complete: F4,
+    ) -> Result<RunEvaluation, RunErr>
+    where
+        F1: FnMut(&()),
+        F2: FnMut(&RunResult),
+        F3: FnMut(&()),
+        F4: FnMut(&RunResult),
+    {
+        let start = self.time.now();
+
+        let evaluation = self.evaluate_source(source)?;
+
+        if evaluation.part_one.is_none() && evaluation.part_two.is_none() {
+            return Ok(RunEvaluation::Script(RunResult {
+                value: evaluation.result.to_string(),
+                duration: self.elapsed_millis(start),
+            }));
+        }
+
+        let input = evaluation.environment.borrow().get_sections("input");
+        if input.len() > 1 {
+            return Err(RunErr {
+                message: "Expected a single 'input' section".to_owned(),
+                source: input[1].source,
+                trace: vec![],
+            });
+        }
+        let evaluated_input: Option<Rc<Object>> = if input.len() == 1 {
+            Some(
+                self.evaluator
+                    .evaluate_with_environment(&input[0], Rc::clone(&evaluation.environment))?,
+            )
+        } else {
+            None
+        };
+
+        let mut part_one_result: Option<RunResult> = None;
+        if let Some(part_one) = evaluation.part_one {
+            on_part_one_start(&());
+            let start = self.time.now();
+            let value = self.evaluate_solution(&part_one, Rc::clone(&evaluation.environment), &evaluated_input)?;
+            let result = RunResult {
+                value: value.to_string(),
+                duration: self.elapsed_millis(start),
+            };
+            on_part_one_complete(&result);
+            part_one_result = Some(result);
+        }
+
+        let mut part_two_result: Option<RunResult> = None;
+        if let Some(part_two) = evaluation.part_two {
+            on_part_two_start(&());
+            let start = self.time.now();
+            let value = self.evaluate_solution(&part_two, Rc::clone(&evaluation.environment), &evaluated_input)?;
+            let result = RunResult {
+                value: value.to_string(),
+                duration: self.elapsed_millis(start),
+            };
+            on_part_two_complete(&result);
+            part_two_result = Some(result);
+        }
+
+        Ok(RunEvaluation::Solution {
+            part_one: part_one_result,
+            part_two: part_two_result,
+        })
+    }
+
     pub fn test(&mut self, source: &str, include_slow: bool) -> Result<Vec<TestCase>, RunErr> {
         let evaluation = self.evaluate_source(source)?;
 
@@ -255,6 +336,143 @@ impl<T: Time> AoCRunner<T> {
                 slow: is_slow,
                 skipped: false,
             });
+        }
+
+        Ok(results)
+    }
+
+    /// Run tests with callbacks for progress streaming.
+    ///
+    /// Callbacks are invoked at key points:
+    /// - `on_test_start`: Called before each test begins (with index and partial TestCase)
+    /// - `on_test_complete`: Called after each test completes (with index and full TestCase)
+    pub fn test_streaming<F1, F2>(
+        &mut self,
+        source: &str,
+        include_slow: bool,
+        mut on_test_start: F1,
+        mut on_test_complete: F2,
+    ) -> Result<Vec<TestCase>, RunErr>
+    where
+        F1: FnMut(usize, &TestCase),
+        F2: FnMut(usize, &TestCase),
+    {
+        let evaluation = self.evaluate_source(source)?;
+
+        let mut results = vec![];
+        let mut test_index = 0;
+
+        for (test, attributes) in evaluation.environment.borrow().get_sections_with_attributes("test") {
+            let is_slow = Environment::section_has_attribute(&attributes, "slow");
+
+            // Emit start event with partial info
+            let partial_case = TestCase {
+                part_one: None,
+                part_two: None,
+                slow: is_slow,
+                skipped: is_slow && !include_slow,
+            };
+            on_test_start(test_index, &partial_case);
+
+            // Skip slow tests unless explicitly requested - but still include in results
+            if is_slow && !include_slow {
+                let result = TestCase {
+                    part_one: None,
+                    part_two: None,
+                    slow: true,
+                    skipped: true,
+                };
+                on_test_complete(test_index, &result);
+                results.push(result);
+                test_index += 1;
+                continue;
+            }
+
+            let test_environment = Environment::from(Rc::clone(&evaluation.environment));
+            let _test_result = self
+                .evaluator
+                .evaluate_with_environment(&test, Rc::clone(&test_environment))?;
+
+            let expected_part_one = test_environment.borrow().get_sections("part_one");
+            let expected_part_two = test_environment.borrow().get_sections("part_two");
+
+            if expected_part_one.is_empty() && expected_part_two.is_empty() {
+                test_index += 1;
+                continue;
+            }
+
+            if expected_part_one.len() > 1 {
+                return Err(RunErr {
+                    message: "Expected a single 'part_one' assertion".to_owned(),
+                    source: expected_part_one[1].source,
+                    trace: vec![],
+                });
+            }
+
+            if expected_part_two.len() > 1 {
+                return Err(RunErr {
+                    message: "Expected a single 'part_two' assertion".to_owned(),
+                    source: expected_part_two[1].source,
+                    trace: vec![],
+                });
+            }
+
+            let input = test_environment.borrow().get_sections("input");
+            if input.len() > 1 {
+                return Err(RunErr {
+                    message: "Expected a single 'input' fixture".to_owned(),
+                    source: input[1].source,
+                    trace: vec![],
+                });
+            }
+            let evaluated_input: Option<Rc<Object>> = if input.len() == 1 {
+                Some(
+                    self.evaluator
+                        .evaluate_with_environment(&input[0].clone(), Rc::clone(&evaluation.environment))?,
+                )
+            } else {
+                None
+            };
+
+            let mut part_one_result: Option<TestCaseResult> = None;
+            if expected_part_one.len() == 1 {
+                if let Some(part_one) = &evaluation.part_one {
+                    let expected = self
+                        .evaluator
+                        .evaluate_with_environment(&expected_part_one[0], Rc::clone(&test_environment))?;
+                    let value = self.evaluate_solution(part_one, Rc::clone(&test_environment), &evaluated_input)?;
+                    part_one_result = Some(TestCaseResult {
+                        expected: expected.to_string(),
+                        actual: value.to_string(),
+                        passed: expected == value,
+                    });
+                }
+            }
+
+            let mut part_two_result: Option<TestCaseResult> = None;
+            if expected_part_two.len() == 1 {
+                if let Some(part_two) = &evaluation.part_two {
+                    let expected = self
+                        .evaluator
+                        .evaluate_with_environment(&expected_part_two[0], Rc::clone(&test_environment))?;
+                    let value = self.evaluate_solution(part_two, Rc::clone(&test_environment), &evaluated_input)?;
+                    part_two_result = Some(TestCaseResult {
+                        expected: expected.to_string(),
+                        actual: value.to_string(),
+                        passed: expected == value,
+                    });
+                }
+            }
+
+            let result = TestCase {
+                part_one: part_one_result,
+                part_two: part_two_result,
+                slow: is_slow,
+                skipped: false,
+            };
+            on_test_complete(test_index, &result);
+            results.push(result);
+            test_index += 1;
         }
 
         Ok(results)

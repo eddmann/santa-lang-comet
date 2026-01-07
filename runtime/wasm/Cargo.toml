@@ -14,7 +14,9 @@ crate-type = ["cdylib"]
 wasm-bindgen = "0.2.99"
 js-sys = "0.3.76"
 lang = { path = "../../lang", version = "*", features = ["serde"]}
+serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
+tsify-next = { version = "0.5", features = ["js"] }
 
 [dependencies.web-sys]
 version = "0.3.76"
