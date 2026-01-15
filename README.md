@@ -28,12 +28,12 @@ Source Code → Lexer → Parser → Evaluator → Result
                            Environment (Scopes)
 ```
 
-| Component       | Description                                              |
-| --------------- | -------------------------------------------------------- |
-| **Lexer**       | Tokenizes source into keywords, operators, literals      |
-| **Parser**      | Builds an Abstract Syntax Tree (AST)                     |
-| **Evaluator**   | Tree-walking interpreter that executes the AST           |
-| **Environment** | Manages variable bindings and closures across scopes     |
+| Component       | Description                                          |
+| --------------- | ---------------------------------------------------- |
+| **Lexer**       | Tokenizes source into keywords, operators, literals  |
+| **Parser**      | Builds an Abstract Syntax Tree (AST)                 |
+| **Evaluator**   | Tree-walking interpreter that executes the AST       |
+| **Environment** | Manages variable bindings and closures across scopes |
 
 For detailed implementation internals, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -205,14 +205,21 @@ make bench/compare V1=main V2=HEAD  # Compare versions
 
 The language has been implemented multiple times to explore different execution models and technologies.
 
-| Codename | Type | Language |
-|----------|------|----------|
-| [Comet](https://github.com/eddmann/santa-lang-comet) | Tree-walking interpreter | Rust |
-| [Blitzen](https://github.com/eddmann/santa-lang-blitzen) | Bytecode VM | Rust |
-| [Dasher](https://github.com/eddmann/santa-lang-dasher) | LLVM native compiler | Rust |
-| [Donner](https://github.com/eddmann/santa-lang-donner) | JVM bytecode compiler | Kotlin |
-| [Vixen](https://github.com/eddmann/santa-lang-vixen) | Embedded bytecode VM | C |
+| Codename                                                 | Type                     | Language   |
+| -------------------------------------------------------- | ------------------------ | ---------- |
+| [Comet](https://github.com/eddmann/santa-lang-comet)     | Tree-walking interpreter | Rust       |
+| [Blitzen](https://github.com/eddmann/santa-lang-blitzen) | Bytecode VM              | Rust       |
+| [Dasher](https://github.com/eddmann/santa-lang-dasher)   | LLVM native compiler     | Rust       |
+| [Donner](https://github.com/eddmann/santa-lang-donner)   | JVM bytecode compiler    | Kotlin     |
+| [Vixen](https://github.com/eddmann/santa-lang-vixen)     | Embedded bytecode VM     | C          |
 | [Prancer](https://github.com/eddmann/santa-lang-prancer) | Tree-walking interpreter | TypeScript |
+
+## Tooling
+
+| Name                                                         | Description    | Language    |
+| ------------------------------------------------------------ | -------------- | ----------- |
+| [Workbench](https://github.com/eddmann/santa-lang-workbench) | Desktop IDE    | Tauri/React |
+| [Tinsel](https://github.com/eddmann/santa-lang-tinsel)       | Code formatter | Zig         |
 
 ## License
 
